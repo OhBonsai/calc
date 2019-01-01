@@ -23,13 +23,10 @@ const (
 const (
 	_ int = iota
 	LOWEST
-	EQUALS      // ==
-	LESSGREATER // > or <
-	SUM         // +
-	PRODUCT     // *
-	PREFIX      // -X or !X
-	CALL        // myFunction(X)
-	INDEX       // array[index]
+	SUM     // +, -
+	PRODUCT // *, /
+	PREFIX  // -X
+	CALL    // (X)
 )
 
 var precedences = map[string]int{
@@ -209,7 +206,7 @@ func (p *Parser) registerInfix(tokenType string, fn infixParseFn) {
 	p.infixParseFns[tokenType] = fn
 }
 
-func New(l *Lexer) *Parser {
+func NewParser(l *Lexer) *Parser {
 	p := &Parser{
 		l:      l,
 		errors: []string{},
@@ -231,21 +228,21 @@ func New(l *Lexer) *Parser {
 	return p
 }
 
-func (p *Parser) parseExpression(precedence int) Expression {
+func (p *Parser) ParseExpression(precedence int) Expression {
 	prefix := p.prefixParseFns[p.curToken.Type]
-	leftExp := prefix()
+	returnExp := prefix()
 
 	for precedence < p.peekPrecedence() {
-		infix := p.infixParseFns[p.curToken.Type]
+		infix := p.infixParseFns[p.peekToken.Type]
 		if infix == nil {
-			return leftExp
+			return returnExp
 		}
 
 		p.nextToken()
-		leftExp = infix(leftExp)
+		returnExp = infix(returnExp)
 	}
 
-	return leftExp
+	return returnExp
 }
 
 func (p *Parser) peekPrecedence() int {
@@ -295,7 +292,7 @@ func (p *Parser) parsePrefixExpression() Expression {
 		Operator: p.curToken.Literal,
 	}
 	p.nextToken()
-	expression.Right = p.parseExpression(PREFIX)
+	expression.Right = p.ParseExpression(PREFIX)
 	return expression
 }
 
@@ -316,7 +313,11 @@ func (p *Parser) parseInfixExpression(left Expression) Expression {
 	//} else {
 	//	expression.Right = p.parseExpression(precedence)
 	//}
-	expression.Right = p.parseExpression(precedence)
+	expression.Right = p.ParseExpression(precedence)
 
 	return expression
+}
+
+func (p *Parser) Errors() []string {
+	return p.errors
 }
