@@ -38,6 +38,14 @@ var precedences = map[string]int{
 }
 
 func Calc(input string) int64 {
+	lexer := NewLex(input)
+	parser := NewParser(lexer)
+
+	exp := parser.ParseExpression(LOWEST)
+
+	switch exp.(type) {
+	case
+	}
 	return 1
 }
 
@@ -215,6 +223,7 @@ func NewParser(l *Lexer) *Parser {
 	p.prefixParseFns = make(map[string]prefixParseFn)
 	p.registerPrefix(INT, p.parseIntegerLiteral)
 	p.registerPrefix(MINUS, p.parsePrefixExpression)
+	p.registerPrefix(LPAREN, p.parseGroupedExpression)
 
 	p.infixParseFns = make(map[string]infixParseFn)
 	p.registerInfix(PLUS, p.parseInfixExpression)
@@ -265,6 +274,21 @@ func (p *Parser) peekError(t string) {
 	p.errors = append(p.errors, msg)
 }
 
+func (p *Parser) expectPeek(t string) bool {
+	if p.peekTokenIs(t) {
+		p.nextToken()
+		return true
+	} else {
+		p.peekError(t)
+		return false
+	}
+}
+
+func (p *Parser) peekTokenIs(t string) bool {
+	return p.peekToken.Type == t
+}
+
+
 func (p *Parser) nextToken() {
 	p.curToken = p.peekToken
 	p.peekToken = p.l.NextToken()
@@ -295,6 +319,17 @@ func (p *Parser) parsePrefixExpression() Expression {
 	expression.Right = p.ParseExpression(PREFIX)
 	return expression
 }
+
+func (p *Parser) parseGroupedExpression() Expression {
+	p.nextToken()
+	exp := p.ParseExpression(LOWEST)
+
+	if !p.expectPeek(token.RPAREN){
+		return nil
+	}
+	return exp
+}
+
 
 func (p *Parser) parseInfixExpression(left Expression) Expression {
 
