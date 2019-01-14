@@ -42,11 +42,52 @@ func Calc(input string) int64 {
 	parser := NewParser(lexer)
 
 	exp := parser.ParseExpression(LOWEST)
+	return Eval(exp)
+}
 
-	switch exp.(type) {
-	case
+
+func Eval(exp Expression) int64 {
+	switch node := exp.(type) {
+	case *IntegerLiteralExpression:
+		return node.Value
+	case *PrefixExpression:
+		rightV := Eval(node.Right)
+		return evalPrefixExpression(node.Operator, rightV)
+	case *InfixExpression:
+		leftV := Eval(node.Left)
+		rightV := Eval(node.Right)
+		return evalInfixExpression(leftV, node.Operator, rightV)
 	}
-	return 1
+
+	return 0
+}
+
+func evalPrefixExpression(operator string, right int64) int64{
+	if operator != "-" {
+		return 0
+	}
+	return -right
+}
+
+
+func evalInfixExpression(left int64, operator string, right int64) int64 {
+
+	switch operator {
+	case "+":
+		return left + right
+	case "-":
+		return left - right
+	case "*":
+		return left * right
+	case "/":
+		if right != 0{
+			return left / right
+		}else{
+			return 0
+		}
+	default:
+		return 0
+	}
 }
 
 type Token struct {
@@ -324,7 +365,7 @@ func (p *Parser) parseGroupedExpression() Expression {
 	p.nextToken()
 	exp := p.ParseExpression(LOWEST)
 
-	if !p.expectPeek(token.RPAREN){
+	if !p.expectPeek(RPAREN){
 		return nil
 	}
 	return exp
